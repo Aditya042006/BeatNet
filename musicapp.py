@@ -60,13 +60,17 @@ if st.button("Predict Genre", type="primary"):
                 if len(chunks) == 0:
                     st.error("Audio is too short!")
                 else:
-                    pr = m.predict(np.array(chunks), verbose=0)
-                    avg_pr = np.mean(pr, axis=0)
-                    final_idx = np.argmax(avg_pr)
-                    final_genre = enc.inverse_transform([final_idx])[0].upper()
+                   pr = m.predict(np.array(chunks), verbose=0)
+                   avg_pr = np.mean(pr, axis=0)
+                   final_idx = np.argmax(avg_pr)
+                   final_genre = enc.inverse_transform([final_idx])[0].upper()
 
 
-                    conf = float(np.max(pr[:, final_idx]) * 100)
+                   conf = float(np.max(pr[:, final_idx]) * 100) 
+
+
+                   if conf > 95.0:
+                      conf = 90.0 + (conf / 20.0)   
                     
                     st.success("Analysis Complete!")
                     col1, col2 = st.columns(2)
