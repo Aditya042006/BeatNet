@@ -64,7 +64,9 @@ if st.button("Predict Genre", type="primary"):
                     avg_pr = np.mean(pr, axis=0)
                     final_idx = np.argmax(avg_pr)
                     final_genre = enc.inverse_transform([final_idx])[0].upper()
-                    conf = float(avg_pr[final_idx] * 100)
+
+
+                    conf = float(np.max(pr[:, final_idx]) * 100)
                     
                     st.success("Analysis Complete!")
                     col1, col2 = st.columns(2)
