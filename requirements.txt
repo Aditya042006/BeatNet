@@ -1,5 +1,5 @@
 streamlit
-tensorflow-cpu
-librosa
+tensorflow-cpu<2.16.0
+librosa==0.10.1
 numpy<2.0.0
 scikit-learn
