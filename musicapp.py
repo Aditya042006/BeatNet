@@ -11,7 +11,7 @@ st.set_page_config(page_title="Music Genre Classifier", page_icon="🎵", layout
 # AI ko load karna (Cache laga diya taaki baar-baar load na ho)
 @st.cache_resource
 def load_ai():
-    m = load_model("b.h5")
+    m = load_model("b.h5", compile=False)
     enc = pickle.load(open("g.pkl", "rb"))
     return m, enc
 
