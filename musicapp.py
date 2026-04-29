@@ -6,78 +6,83 @@ from tensorflow.keras.models import load_model
 import tempfile
 import os
 
-st.set_page_config(page_title="Music Genre Classifier", page_icon="🎵", layout="centered")
-
+st.set_page_config(page_title="BeatNet", layout="centered")
 
 @st.cache_resource
-def load_ai():
+def loadai():
     m = load_model("b.h5", compile=False)
-    enc = pickle.load(open("g.pkl", "rb"))
+    with open("g.pkl", "rb") as f:
+        enc = pickle.load(f)
     return m, enc
 
-m, enc = load_ai()
+m, enc = loadai()
 
-st.title("🎵 AI Music Genre Classifier")
-st.markdown("Upload any `.wav` or `.mp3` audio track, and our CNN will predict its genre.")
+st.markdown("<h1 style='text-align: center; font-family: Impact, sans-serif; color: #FF4B4B; font-size: 65px; letter-spacing: 3px;'>BeatNet</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 16px; color: gray;'>Upload any .wav or .mp3 audio track, and our CNN will predict its genre.</p>", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Upload Audio Track", type=["wav", "mp3"])
+upf = st.file_uploader("Upload Audio Track", type=["wav", "mp3"])
 
-if uploaded_file is not None:
-    st.audio(uploaded_file, format='audio/wav')
+if upf is not None:
+    st.audio(upf, format='audio/wav')
 
 if st.button("Predict Genre", type="primary"):
-    if uploaded_file is not None:
-        with st.spinner("Extracting acoustic features and analyzing..."):
-            try:
-                
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-                    temp_audio.write(uploaded_file.read())
-                    temp_path = temp_audio.name
-
-                
-                aud, sr = librosa.load(temp_path, offset=15.0, duration=30.0, mono=True, sr=22050)
-                chunk_sec = 3.0
-                overlap_sec = 1.5
-                chunk_samp = int(chunk_sec * sr)
-                step_samp = int((chunk_sec - overlap_sec) * sr)
-                
-                chunks = []
-                for st_idx in range(0, len(aud) - chunk_samp + 1, step_samp):
-                    en = st_idx + chunk_samp
-                    chk = aud[st_idx:en]
-                    sp = librosa.feature.melspectrogram(y=chk, sr=sr, n_mels=128)
-                    ls = librosa.power_to_db(sp, ref=np.max)
-                    
-                    if ls.shape[1] < 128: ls = np.pad(ls, ((0, 0), (0, 128 - ls.shape[1])))
-                    else: ls = ls[:, :128]
-                        
-                    mn, mx = np.min(ls), np.max(ls)
-                    ls = (ls - mn) / (mx - mn + 1e-6)
-                    chunks.append(ls.reshape(128, 128, 1))
-                
-                os.remove(temp_path) 
-
-                if len(chunks) == 0:
-                    st.error("Audio is too short!")
-                else:
-                    pr = m.predict(np.array(chunks), verbose=0)
-                    avg_pr = np.mean(pr, axis=0)
-                    final_idx = np.argmax(avg_pr)
-                    final_genre = enc.inverse_transform([final_idx])[0].upper()
-
-                    
-                    conf = float(np.max(pr[:, final_idx]) * 100) 
-
-                    
-                    if conf > 95.0:
-                        conf = 90.0 + (conf / 20.0) 
-
-                    st.success("Analysis Complete!")
-                    col1, col2 = st.columns(2)
-                    col1.metric(label="Predicted Genre", value=final_genre)
-                    col2.metric(label="Confidence Level", value=f"{conf:.2f}%")
-
-            except Exception as e:
-                st.error(f"Error analyzing audio: {e}")
-    else:
+    if upf is None:
         st.warning("Please upload a file first!")
+    else:
+        if upf.size > 26214400:
+            st.error("File is too heavy! Please upload a track smaller than 25MB.")
+        else:
+            with st.spinner("Analyzing..."):
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                        tmp.write(upf.read())
+                        path = tmp.name
+
+                    aud, sr = librosa.load(path, offset=15.0, duration=30.0, mono=True, sr=22050)
+                    wsec = 3.0
+                    osec = 1.5
+                    wsamp = int(wsec * sr)
+                    hsamp = int((wsec - osec) * sr)
+                    
+                    chks = []
+                    for pos in range(0, len(aud) - wsamp + 1, hsamp):
+                        en = pos + wsamp
+                        slc = aud[pos:en]
+                        
+                        mel = librosa.feature.melspectrogram(y=slc, sr=sr, n_mels=128)
+                        dbmel = librosa.power_to_db(mel, ref=np.max)
+                        
+                        if dbmel.shape[1] < 128: 
+                            dbmel = np.pad(dbmel, ((0, 0), (0, 128 - dbmel.shape[1])))
+                        else: 
+                            dbmel = dbmel[:, :128]
+                            
+                        mn = np.min(dbmel)
+                        mx = np.max(dbmel)
+                        norm = (dbmel - mn) / (mx - mn + 1e-6)
+                        
+                        chks.append(norm.reshape(128, 128, 1))
+                    
+                    os.remove(path) 
+
+                    if len(chks) == 0:
+                        st.error("Audio is too short!")
+                    else:
+                        inp = np.array(chks)
+                        pr = m.predict(inp, verbose=0)
+                        
+                        mpr = np.mean(pr, axis=0)
+                        widx = np.argmax(mpr)
+                        pgen = enc.inverse_transform([widx])[0].upper()
+                        
+                        pconf = float(np.max(pr[:, widx]) * 100) 
+                        if pconf > 95.0:
+                            pconf = 90.0 + (pconf / 20.0) 
+
+                        st.success("Analysis Complete!")
+                        c1, c2 = st.columns(2)
+                        c1.metric(label="Predicted Genre", value=pgen)
+                        c2.metric(label="Confidence Level", value=f"{pconf:.2f}%")
+
+                except Exception as err:
+                    st.error(f"Error details: {err}")
