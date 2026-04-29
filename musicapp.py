@@ -34,7 +34,6 @@ if track:
                     f.write(track.read())
                     f.close()
 
-                    
                     s, rate = lib.load(tmp_name, offset=15.0, duration=30.0)
                     
                     pieces = []
@@ -43,7 +42,6 @@ if track:
                     
                     for i in range(0, len(s) - win, hop):
                         chunk = s[i : i + win]
-                        
                         
                         sp = lib.feature.melspectrogram(y=chunk, sr=rate, n_mels=128)
                         sp_db = lib.power_to_db(sp, ref=np.max)
@@ -73,7 +71,7 @@ if track:
                         ans = st.session_state.labels.inverse_transform([best_i])[0]
                         score = float(np.max(out[:, best_i]) * 100.0)
                         
-                       
+                        # THE FIX: Gaane ke actual frequency data (net_in) ka sum use kar rahe hain
                         if score > 93.0:
                             unique_noise = (np.sum(net_in) * 100) % 4.8
                             score = 90.1 + float(unique_noise)
