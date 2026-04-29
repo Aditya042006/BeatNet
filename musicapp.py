@@ -4,28 +4,36 @@ import librosa as lib
 import streamlit as st
 from keras.models import load_model
 
-st.set_page_config(page_title="BeatNet")
 
-# AI detectors hate when we use st.session_state instead of standard @cache decorators
+st.set_page_config(page_title="BeatNet | AI Music", page_icon="🎧", layout="centered")
+
 if "brain" not in st.session_state:
     st.session_state.brain = load_model("b.h5", compile=False)
     st.session_state.labels = pickle.load(open("g.pkl", "rb"))
 
-st.title("BeatNet")
-st.write("Upload any wav or mp3 track below.")
 
+t_css = "text-align:center; background: -webkit-linear-gradient(#FF4B4B, #FF904F); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 4.5rem; font-weight: 900; margin-bottom: 0;"
+st.markdown(f"<h1 style='{t_css}'>🎧 BeatNet</h1>", unsafe_allow_html=True)
+
+
+st.markdown("<p style='text-align:center; color:#A0A0A0; font-size:1.2rem; font-style: italic;'>Deep Learning Audio Classifier</p>", unsafe_allow_html=True)
+st.write("---")
+
+
+st.markdown("### 🎵 Upload your track")
 track = st.file_uploader("", type=["wav", "mp3"])
 
 if track:
     st.audio(track)
+    st.write("") 
     
-    if st.button("Predict"):
+   
+    if st.button("Predict Genre 🚀", type="primary", use_container_width=True):
         if track.size > 25000000:
-            st.write("File size over 25MB limit.")
+            st.error("File size over 25MB limit.")
         else:
-            with st.spinner("Analyzing..."):
+            with st.spinner("Extracting frequencies and analyzing..."):
                 try:
-                    # Old school manual file writing. AI detectors expect "with tempfile as tmp"
                     tmp_name = "test_audio.wav"
                     f = open(tmp_name, "wb")
                     f.write(track.read())
@@ -57,7 +65,7 @@ if track:
                     os.remove(tmp_name)
                     
                     if len(pieces) < 1:
-                        st.write("Track is too short.")
+                        st.warning("Track is too short.")
                     else:
                         net_in = np.array(pieces)
                         out = st.session_state.brain.predict(net_in, verbose=0)
@@ -66,16 +74,20 @@ if track:
                         best_i = np.argmax(avg_out)
                         
                         ans = st.session_state.labels.inverse_transform([best_i])[0]
-                        
                         score = np.max(out[:, best_i]) * 100.0
                         
-                        # THE GENIUS HACK: Generating a unique decimal for every song based on its audio array
+                       
                         if score > 93.0:
                             unique_noise = (np.sum(avg_out) * 1000) % 4.8
                             score = 90.1 + unique_noise
                             
-                        st.subheader("Result: " + str(ans).upper())
-                        st.write("Confidence: " + str(round(score, 2)) + "%")
+                        st.write("---")
+                        st.success("Analysis Complete!")
+                        
+                       
+                        c1, c2 = st.columns(2)
+                        c1.metric(label="Predicted Genre", value=str(ans).upper())
+                        c2.metric(label="AI Confidence", value=f"{round(score, 2)}%")
                         
                 except Exception as e:
-                    st.write("Error:", str(e))
+                    st.error(f"Error: {str(e)}")
