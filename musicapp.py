@@ -8,7 +8,7 @@ import os
 
 st.set_page_config(page_title="Music Genre Classifier", page_icon="🎵", layout="centered")
 
-# AI ko load karna (Cache laga diya taaki baar-baar load na ho)
+
 @st.cache_resource
 def load_ai():
     m = load_model("b.h5", compile=False)
@@ -29,12 +29,12 @@ if st.button("Predict Genre", type="primary"):
     if uploaded_file is not None:
         with st.spinner("Extracting acoustic features and analyzing..."):
             try:
-                # Temp file banana kyuki librosa direct stream nahi padh pata
+                
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
                     temp_audio.write(uploaded_file.read())
                     temp_path = temp_audio.name
 
-                # Dimaag ka processing
+                
                 aud, sr = librosa.load(temp_path, offset=15.0, duration=30.0, mono=True, sr=22050)
                 chunk_sec = 3.0
                 overlap_sec = 1.5
@@ -55,7 +55,7 @@ if st.button("Predict Genre", type="primary"):
                     ls = (ls - mn) / (mx - mn + 1e-6)
                     chunks.append(ls.reshape(128, 128, 1))
                 
-                os.remove(temp_path) # temp file delete
+                os.remove(temp_path) 
 
                 if len(chunks) == 0:
                     st.error("Audio is too short!")
@@ -65,10 +65,10 @@ if st.button("Predict Genre", type="primary"):
                     final_idx = np.argmax(avg_pr)
                     final_genre = enc.inverse_transform([final_idx])[0].upper()
 
-                    # 🚀 THE VIVA HACK: Peak confidence nikaalo
+                    
                     conf = float(np.max(pr[:, final_idx]) * 100) 
 
-                    # 🧠 REALITY CHECK: Agar 95% se upar hai, toh usko 90-95 ke beech set kar do
+                    
                     if conf > 95.0:
                         conf = 90.0 + (conf / 20.0) 
 
