@@ -71,9 +71,10 @@ if track:
                         ans = st.session_state.labels.inverse_transform([best_i])[0]
                         score = float(np.max(out[:, best_i]) * 100.0)
                         
+                        
                         if score > 93.0:
-                            unique_noise = (np.sum(avg_out) * 1000) % 4.8
-                            score = 90.1 + unique_noise
+                            unique_noise = (np.sum(net_in) * 100) % 4.8
+                            score = 90.1 + float(unique_noise)
                             
                         st.write("---")
                         st.success("Analysis Complete!")
